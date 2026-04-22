@@ -1,0 +1,82 @@
+# Dredactor配置文件
+
+# 脱敏默认设置
+redaction:
+  # 默认脱敏模式: replace(替换), mask(遮蔽), partial(部分显示)
+  default_mode: replace
+
+  # 替换文本
+  replacement_text: "****"
+
+  # 部分遮蔽设置（显示前n位和后m位）
+  partial_reveal:
+    show_prefix: 3
+    show_suffix: 4
+
+  # 是否保留原始格式
+  preserve_formatting: true
+
+# 规则设置
+rules:
+  # 规则文件路径
+  default_rules_file: "rules/default_rules.json"
+  custom_rules_file: "rules/custom_rules.json"
+
+  # 是否启用自定义规则
+  enable_custom_rules: true
+
+# AI设置（可选）
+ai:
+  # 是否启用AI智能脱敏
+  enabled: false
+
+  # AI API密钥
+  api_key: ""
+
+  # AI服务提供商: openai, azure, local
+  provider: "openai"
+
+  # 模型名称
+  model: "gpt-4"
+
+  # API基础URL（自定义端点）
+  api_base: ""
+
+  # 最大token数
+  max_tokens: 4096
+
+# 输出设置
+output:
+  # 默认输出后缀
+  default_suffix: "_redacted"
+
+  # 是否覆盖原文件
+  overwrite_original: false
+
+  # 输出目录（批量处理时使用）
+  output_dir: ""
+
+# 报告设置
+report:
+  # 报告格式: json, markdown, both
+  format: "both"
+
+  # 报告详细程度: simple, detailed, full
+  detail_level: "detailed"
+
+  # 是否生成脱敏对比
+  include_comparison: false
+
+  # 报告输出目录
+  output_dir: "reports"
+
+# 日志设置
+logging:
+  # 日志级别: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+
+  # 日志文件路径
+  file: "dredactor.log"
+
+  # 是否输出到控制台
+  console: true

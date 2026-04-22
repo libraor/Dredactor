@@ -1,0 +1,24 @@
+# Word文档处理
+python-docx>=1.1.0
+
+# CLI框架
+typer[all]>=0.12.0
+
+# 配置管理
+pyyaml>=6.0
+
+# JSON处理（内置，但可能需要更好的验证）
+# jsonschema>=4.0.0
+
+# 可选：AI支持（如需要智能脱敏）
+# openai>=1.0.0
+
+# Web 界面
+streamlit>=1.28.0
+
+# 开发依赖
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.0.0
+pylint>=3.0.0
+mypy>=1.5.0
