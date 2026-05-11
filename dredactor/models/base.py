@@ -5,27 +5,60 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 
-class RedactionMode(Enum):
-    """脱敏模式枚举"""
+class RedactionMethod(Enum):
+    """基础脱敏方式枚举
 
-    REPLACE = "replace"  # 完全替换
-    MASK = "mask"  # 遮蔽（用星号）
-    PARTIAL = "partial"  # 部分显示
+    脱敏方式定义了数据处理的基本形式：
+    - REPLACE: 完全替换为指定文本（可恢复）
+    - MASK: 完全遮蔽为星号（不可恢复）
+    - PARTIAL: 部分显示，中间遮蔽（不可恢复）
+    """
+
+    REPLACE = "replace"  # 完全替换（可恢复）
+    MASK = "mask"  # 完全遮蔽（不可恢复）
+    PARTIAL = "partial"  # 部分显示（不可恢复）
+
+
+class RedactionStrategy(Enum):
+    """脱敏策略枚举
+
+    脱敏策略是基于脱敏方式的具体实现方案：
+    - 基础策略：直接使用基础脱敏方式
+    - 特殊策略：针对特定数据类型的定制化处理
+
+    特殊策略说明：
+    - COMPANY: 公司名称脱敏，保留地名前缀和公司类型后缀，遮蔽中间字号
+              本质上是 partial 方式的特殊变体，专门针对公司名称数据类型
+    """
+
+    REPLACE = "replace"  # 基础策略：完全替换
+    MASK = "mask"  # 基础策略：完全遮蔽
+    PARTIAL = "partial"  # 基础策略：部分显示
+    COMPANY = "company"  # 特殊策略：公司名称脱敏（partial的变体）
+
+
+# 不可恢复的策略列表
+IRREVERSIBLE_STRATEGIES = ["mask", "partial", "company"]
 
 
 @dataclass
 class Rule:
-    """脱敏规则定义"""
+    """脱敏规则定义
+
+    规则定义了如何识别和处理特定类型的敏感数据：
+    - pattern: 正则表达式，用于匹配特定数据类型（如手机号、身份证号等）
+    - strategy: 脱敏策略，决定如何处理匹配到的数据
+    """
 
     name: str  # 规则名称
-    pattern: str  # 正则表达式
+    pattern: str  # 正则表达式（匹配特定数据类型）
     description: str = ""  # 规则描述
     enabled: bool = True  # 是否启用
-    mode: str = "mask"  # 脱敏模式
+    strategy: str = "replace"  # 脱敏策略（replace/mask/partial/company）
     priority: int = 10  # 优先级（数值越大优先级越高）
-    replacement: Optional[str] = None  # 自定义替换文本
-    show_prefix: int = 3  # 部分显示模式：显示前n位
-    show_suffix: int = 4  # 部分显示模式：显示后n位
+    replacement: Optional[str] = None  # 自定义替换文本（replace策略使用）
+    show_prefix: int = 3  # 部分显示策略：显示前n位
+    show_suffix: int = 4  # 部分显示策略：显示后n位
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
@@ -34,7 +67,7 @@ class Rule:
             "pattern": self.pattern,
             "description": self.description,
             "enabled": self.enabled,
-            "mode": self.mode,
+            "strategy": self.strategy,
             "priority": self.priority,
             "replacement": self.replacement,
             "show_prefix": self.show_prefix,
@@ -49,7 +82,7 @@ class Rule:
             pattern=data.get("pattern", ""),
             description=data.get("description", ""),
             enabled=data.get("enabled", True),
-            mode=data.get("mode", "mask"),
+            strategy=data.get("strategy", data.get("mode", "replace")),  # 兼容旧字段名
             priority=data.get("priority", 10),
             replacement=data.get("replacement"),
             show_prefix=data.get("show_prefix", 3),

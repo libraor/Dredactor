@@ -9,7 +9,9 @@ from .base import (
     RedactionStats,
     RedactionRecord,
     Rule,
-    RedactionMode,
+    RedactionMethod,
+    RedactionStrategy,
+    IRREVERSIBLE_STRATEGIES,
 )
 
 __all__ = [
@@ -21,5 +23,7 @@ __all__ = [
     "RedactionStats",
     "RedactionRecord",
     "Rule",
-    "RedactionMode",
+    "RedactionMethod",
+    "RedactionStrategy",
+    "IRREVERSIBLE_STRATEGIES",
 ]

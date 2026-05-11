@@ -98,23 +98,23 @@ if page == "文档脱敏":
     if uploaded_file:
         col1, col2, col3 = st.columns(3)
         with col1:
-            mode = st.selectbox(
-                "脱敏模式",
-                options=["mask", "replace", "partial"],
+            strategy = st.selectbox(
+                "脱敏策略",
+                options=["replace", "mask", "partial", "company"],
                 index=0,
-                help="mask: 遮蔽, replace: 替换, partial: 部分显示"
+                help="replace: 替换(可恢复), mask: 遮蔽(不可恢复), partial: 部分显示(不可恢复), company: 公司名称(不可恢复)"
             )
         with col2:
             replacement = st.text_input(
                 "替换文本",
                 value="[已脱敏]",
-                disabled=(mode != "replace"),
+                disabled=(strategy != "replace"),
             )
         with col3:
-            override_mode = st.checkbox(
-                "覆盖规则默认模式",
+            override_strategy = st.checkbox(
+                "覆盖规则默认策略",
                 value=False,
-                help="启用后将使用全局模式，忽略规则的默认模式"
+                help="启用后将使用全局策略，忽略规则的默认策略"
             )
         st.markdown("---")
         save_map = st.checkbox(
@@ -133,9 +133,9 @@ if page == "文档脱敏":
                         rule_manager = load_rules()
                         engine = RedactionEngine(
                             rules=rule_manager.get_enabled_rules(),
-                            default_mode=mode,
+                            default_strategy=strategy,
                             replacement_text=replacement,
-                            override_mode=override_mode,
+                            override_strategy=override_strategy,
                         )
                         result = engine.redact_document(parsed_doc)
                         if save_map:

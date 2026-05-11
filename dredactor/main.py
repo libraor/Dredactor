@@ -35,14 +35,14 @@ def process_document(
     file_path: str = typer.Argument(..., help="Word文档路径"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
     rule_group: Optional[str] = typer.Option(None, "--rule-group", "-g", help="使用的规则组"),
-    mode: str = typer.Option(
-        "mask", "--mode", "-m", help="脱敏模式: replace, mask, partial"
+    strategy: str = typer.Option(
+        "replace", "--strategy", "-s", help="脱敏策略: replace(默认，可恢复), mask(不可恢复), partial(不可恢复), company(不可恢复)"
     ),
     replacement: str = typer.Option(
-        "****", "--replacement", help="替换文本（replace模式）"
+        "[已脱敏]", "--replacement", help="替换文本（replace策略）"
     ),
-    override_mode: bool = typer.Option(
-        False, "--override-mode", help="是否覆盖规则的默认模式"
+    override_strategy: bool = typer.Option(
+        False, "--override-strategy", help="是否覆盖规则的默认策略"
     ),
     save_map: bool = typer.Option(
         False, "--save-map", help="保存脱敏映射文件"
@@ -74,9 +74,9 @@ def process_document(
         # 创建脱敏引擎
         engine = RedactionEngine(
             rules=engine_rules,
-            default_mode=mode,
+            default_strategy=strategy,
             replacement_text=replacement,
-            override_mode=override_mode,
+            override_strategy=override_strategy,
         )
 
         # 执行脱敏

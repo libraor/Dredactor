@@ -6,6 +6,7 @@ CLAUDE.md
 *.docx
 .claude/
 tests/
+.spec-workflow/
 
 # C extensions
 *.so

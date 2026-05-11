@@ -7,7 +7,7 @@
       "description": "中国大陆手机号",
       "pattern": "1[3-9]\\d{9}",
       "enabled": true,
-      "mode": "mask",
+      "strategy": "mask",
       "priority": 10
     },
     {
@@ -15,7 +15,7 @@
       "description": "中国大陆身份证号",
       "pattern": "\\d{17}[\\dXx]",
       "enabled": true,
-      "mode": "mask",
+      "strategy": "mask",
       "priority": 10
     },
     {
@@ -23,7 +23,7 @@
       "description": "电子邮件地址",
       "pattern": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
       "enabled": true,
-      "mode": "replace",
+      "strategy": "replace",
       "priority": 5
     },
     {
@@ -31,7 +31,7 @@
       "description": "银行卡号(16-19位)",
       "pattern": "\\d{16,19}",
       "enabled": true,
-      "mode": "mask",
+      "strategy": "mask",
       "priority": 10
     },
     {
@@ -39,7 +39,7 @@
       "description": "信用卡号(Luhn算法验证)",
       "pattern": "(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9]{2})[0-9]{12}|3[47][0-9]{13}|7(?:0[0678]|1[0123456789])[0-9]{12}|(?:2131|1800|35\\d{3})\\d{11})",
       "enabled": true,
-      "mode": "mask",
+      "strategy": "mask",
       "priority": 15
     },
     {
@@ -47,7 +47,7 @@
       "description": "IPv4地址",
       "pattern": "\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b",
       "enabled": true,
-      "mode": "mask",
+      "strategy": "mask",
       "priority": 8
     },
     {
@@ -55,7 +55,7 @@
       "description": "IPv6地址",
       "pattern": "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))",
       "enabled": false,
-      "mode": "mask",
+      "strategy": "mask",
       "priority": 8
     },
     {
@@ -63,7 +63,7 @@
       "description": "18位中国身份证号",
       "pattern": "[1-9]\\d{5}(18|19|20)\\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]",
       "enabled": true,
-      "mode": "mask",
+      "strategy": "mask",
       "priority": 12
     },
     {
@@ -71,7 +71,7 @@
       "description": "15位中国身份证号（旧版）",
       "pattern": "[1-9]\\d{5}\\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\\d|3[01])\\d{3}",
       "enabled": true,
-      "mode": "mask",
+      "strategy": "mask",
       "priority": 12
     },
     {
@@ -79,7 +79,7 @@
       "description": "统一社会信用代码",
       "pattern": "[0-9A-HJ-NPQRTUWXY]{2}\\d{6}[0-9A-HJ-NPQRTUWXY]{10}",
       "enabled": true,
-      "mode": "replace",
+      "strategy": "replace",
       "priority": 10
     },
     {
@@ -87,7 +87,7 @@
       "description": "护照号码(字母+数字)",
       "pattern": "[A-Za-z]{1,2}\\d{7,9}",
       "enabled": true,
-      "mode": "replace",
+      "strategy": "replace",
       "priority": 9
     },
     {
@@ -95,7 +95,7 @@
       "description": "驾驶证号码",
       "pattern": "\\d{12,18}",
       "enabled": true,
-      "mode": "replace",
+      "strategy": "replace",
       "priority": 9
     },
     {
@@ -103,7 +103,7 @@
       "description": "QQ号",
       "pattern": "[1-9][0-9]{4,10}",
       "enabled": false,
-      "mode": "replace",
+      "strategy": "replace",
       "priority": 5
     },
     {
@@ -111,7 +111,7 @@
       "description": "微信号(字母开头，6-20位)",
       "pattern": "[a-zA-Z][-_a-zA-Z0-9]{5,19}",
       "enabled": false,
-      "mode": "replace",
+      "strategy": "replace",
       "priority": 5
     },
     {
@@ -119,7 +119,7 @@
       "description": "MAC地址",
       "pattern": "([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})",
       "enabled": false,
-      "mode": "mask",
+      "strategy": "mask",
       "priority": 6
     },
     {
@@ -127,7 +127,7 @@
       "description": "通用电话号码(带格式)",
       "pattern": "\\+?\\d{1,4}?[-.\\s]?\\(?\\d{1,4}?\\)?[-.\\s]?\\d{1,4}[-.\\s]?\\d{1,9}",
       "enabled": false,
-      "mode": "mask",
+      "strategy": "mask",
       "priority": 7
     },
     {
@@ -135,7 +135,7 @@
       "description": "URL链接",
       "pattern": "https?://(?:[-\\w.]|(?:%[0-9a-fA-F]{2}))+",
       "enabled": false,
-      "mode": "replace",
+      "strategy": "replace",
       "priority": 4
     },
     {
@@ -143,8 +143,16 @@
       "description": "中文格式电话号码",
       "pattern": "[0-9０-９]{2,4}[-－－－][0-9０-９]{3,4}[-－－－][0-9０-９]{4}",
       "enabled": true,
-      "mode": "mask",
+      "strategy": "mask",
       "priority": 10
+    },
+    {
+      "name": "company_name",
+      "description": "中文公司名称（保留地名和公司类型）",
+      "pattern": "dynamic:company_name",
+      "enabled": true,
+      "strategy": "company",
+      "priority": 20
     }
   ],
   "groups": {
@@ -155,7 +163,8 @@
       "chinese_id_card_18",
       "chinese_id_card_15",
       "passport_number",
-      "driving_license"
+      "driving_license",
+      "company_name"
     ],
     "financial": [
       "bank_card",
@@ -170,6 +179,10 @@
     "social": [
       "qq_number",
       "wechat_id"
+    ],
+    "company_info": [
+      "company_name",
+      "uniform_social_credit_code"
     ]
   }
 }

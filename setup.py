@@ -55,6 +55,7 @@ setup(
         "dredactor": [
             "rules/default_rules.json",
             "config/config.yaml",
+            "data/place_names.json",
         ],
     },
     include_package_data=True,

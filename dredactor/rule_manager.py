@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 
 import yaml
 
-from .models import Rule
+from .models import Rule, IRREVERSIBLE_STRATEGIES
 
 
 class RuleManager:
@@ -96,6 +96,9 @@ class RuleManager:
                 # 加载规则分组
                 self.groups.update(data.get("groups", {}))
 
+                # 解析动态模式
+                self._resolve_dynamic_patterns()
+
             except Exception as e:
                 print(f"警告：加载默认规则失败 - {str(e)}")
         else:
@@ -179,11 +182,15 @@ class RuleManager:
             print(f"错误：正则表达式无效 - {str(e)}")
             return False
 
-        # 检查模式
-        valid_modes = ["replace", "mask", "partial"]
-        if rule.mode not in valid_modes:
-            print(f"错误：脱敏模式无效，必须是 {valid_modes} 之一")
+        # 检查脱敏策略
+        valid_strategies = ["replace", "mask", "partial", "company"]
+        if rule.strategy not in valid_strategies:
+            print(f"错误：脱敏策略无效，必须是 {valid_strategies} 之一")
             return False
+
+        # 不可恢复策略警告
+        if rule.strategy in IRREVERSIBLE_STRATEGIES:
+            print(f"警告：策略 '{rule.strategy}' 为不可恢复策略，脱敏后无法还原原始数据")
 
         return True
 
@@ -310,7 +317,7 @@ class RuleManager:
                 "name": rule.name,
                 "description": rule.description,
                 "enabled": rule.enabled,
-                "mode": rule.mode,
+                "strategy": rule.strategy,
                 "priority": rule.priority,
             }
             for rule in rules
@@ -381,13 +388,128 @@ class RuleManager:
             print(f"错误：导出规则失败 - {str(e)}")
             return False
 
+    def _resolve_dynamic_patterns(self) -> None:
+        """解析动态模式占位符，生成实际的正则表达式"""
+        DYNAMIC_PATTERN_REGISTRY = {
+            "dynamic:company_name": self._generate_company_pattern,
+        }
+
+        for name, rule in self.rules.items():
+            if rule.pattern in DYNAMIC_PATTERN_REGISTRY:
+                generator = DYNAMIC_PATTERN_REGISTRY[rule.pattern]
+                generated = generator()
+                if generated:
+                    rule.pattern = generated
+                else:
+                    rule.enabled = False
+                    print(f"警告：动态模式生成失败，已禁用规则 '{name}'")
+
+    def _get_place_names_path(self) -> str:
+        """获取地名数据文件路径"""
+        package_dir = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(package_dir, "data", "place_names.json")
+
+    def _load_place_names(self) -> dict:
+        """加载地名数据"""
+        path = self._get_place_names_path()
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"警告：加载地名数据失败 - {str(e)}")
+                return {}
+        else:
+            print(f"警告：地名数据文件不存在 - {path}")
+            return {}
+
+    def _generate_company_pattern(self) -> str:
+        """根据地名数据动态生成公司名称匹配的正则表达式。
+
+        模式结构：
+        (?P<geo>...)(?P<district>...)?(?P<name>...)(?P<type>...)
+
+        Returns:
+            str: 生成的正则表达式字符串
+        """
+        data = self._load_place_names()
+        if not data:
+            return ""
+
+        # 构建地理前缀交替列表（按长度从长到短排列，确保正则优先匹配最长的）
+        geo_parts = []
+
+        # 自治区全称（最长，优先匹配）
+        geo_parts.extend(data.get("autonomous_regions_full", []))
+
+        # 特别行政区全称
+        for sar in data.get("sar", []):
+            geo_parts.append(sar + "特别行政区")
+
+        # 省份 + "省" 后缀
+        for province in data.get("provinces", []):
+            geo_parts.append(province + "省")
+
+        # 直辖市 + "市" 后缀
+        for municipality in data.get("municipalities", []):
+            geo_parts.append(municipality + "市")
+
+        # 地级市 + "市" 后缀
+        for city in data.get("prefecture_cities", []):
+            geo_parts.append(city + "市")
+
+        # 自治区简称
+        geo_parts.extend(data.get("autonomous_regions", []))
+
+        # 特别行政区简称
+        geo_parts.extend(data.get("sar", []))
+
+        # 国家级前缀
+        geo_parts.extend(data.get("national_prefixes", []))
+
+        # 省份简称（不带后缀）
+        geo_parts.extend(data.get("provinces", []))
+
+        # 直辖市简称
+        geo_parts.extend(data.get("municipalities", []))
+
+        # 地级市简称（不带后缀）
+        geo_parts.extend(data.get("prefecture_cities", []))
+
+        # 按长度降序排列（最长的排在最前面，确保正则交替匹配优先命中长串）
+        geo_parts.sort(key=len, reverse=True)
+
+        # 转义并构建交替模式
+        geo_pattern = "|".join(re.escape(p) for p in geo_parts)
+
+        # 构建区县交替列表（按长度降序）
+        district_parts = data.get("districts", [])
+        district_parts_sorted = sorted(district_parts, key=len, reverse=True)
+        district_pattern = "|".join(re.escape(d) for d in district_parts_sorted)
+
+        # 构建公司类型交替列表（同样按长度降序）
+        type_parts = data.get("company_types", [])
+        type_parts_sorted = sorted(type_parts, key=len, reverse=True)
+        type_pattern = "|".join(re.escape(t) for t in type_parts_sorted)
+
+        # 组合完整模式
+        # district 部分优先匹配已知区县，其次匹配通用区县格式
+        pattern = (
+            f"(?P<geo>(?:{geo_pattern}))"
+            f"(?P<district>(?:{district_pattern})(?:市|区|县|旗|州|盟)?|[\\u4e00-\\u9fa5]{{1,4}}(?:市|区|县|旗|州|盟))?"
+            f"(?P<name>[\\u4e00-\\u9fa5]{{2,}}?)"
+            f"(?P<type>(?:{type_pattern}))"
+        )
+
+        return pattern
+
     @staticmethod
     def create_rule(
         name: str,
         pattern: str,
         description: str = "",
         enabled: bool = True,
-        mode: str = "mask",
+        strategy: str = "replace",
         priority: int = 10,
         replacement: Optional[str] = None,
     ) -> Rule:
@@ -396,12 +518,12 @@ class RuleManager:
 
         Args:
             name: 规则名称
-            pattern: 正则表达式
+            pattern: 正则表达式（匹配特定数据类型）
             description: 规则描述
             enabled: 是否启用
-            mode: 脱敏模式
+            strategy: 脱敏策略（replace/mask/partial/company）
             priority: 优先级
-            replacement: 替换文本
+            replacement: 替换文本（replace策略使用）
 
         Returns:
             Rule: 规则对象
@@ -411,7 +533,7 @@ class RuleManager:
             pattern=pattern,
             description=description,
             enabled=enabled,
-            mode=mode,
+            strategy=strategy,
             priority=priority,
             replacement=replacement,
         )

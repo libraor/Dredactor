@@ -6,7 +6,8 @@ from typing import List, Optional, Tuple
 
 from .models import (
     ParsedDocument,
-    RedactionMode,
+    RedactionMethod,
+    RedactionStrategy,
     RedactionRecord,
     RedactionResult,
     RedactionStats,
@@ -14,6 +15,7 @@ from .models import (
     Table,
     TableCell,
     TextBlock,
+    IRREVERSIBLE_STRATEGIES,
 )
 
 
@@ -22,7 +24,7 @@ class RedactionEngine:
 
     功能：
     - 基于规则的文本脱敏
-    - 支持多种脱敏模式（替换、遮蔽、部分显示）
+    - 支持多种脱敏策略（替换、遮蔽、部分显示、公司名称）
     - 记录脱敏位置和统计信息
     - 保留原始格式
     """
@@ -30,23 +32,29 @@ class RedactionEngine:
     def __init__(
         self,
         rules: Optional[List[Rule]] = None,
-        default_mode: str = "mask",
-        replacement_text: str = "****",
-        override_mode: bool = False,
+        default_strategy: str = "replace",
+        replacement_text: str = "[已脱敏]",
+        override_strategy: bool = False,
     ):
         """
         初始化脱敏引擎
 
         Args:
             rules: 脱敏规则列表
-            default_mode: 默认脱敏模式
+            default_strategy: 默认脱敏策略
             replacement_text: 替换文本
-            override_mode: 是否覆盖规则的默认模式
+            override_strategy: 是否覆盖规则的默认策略
         """
         self.rules = rules or []
-        self.default_mode = default_mode
+        self.default_strategy = default_strategy
         self.replacement_text = replacement_text
-        self.override_mode = override_mode
+        self.override_strategy = override_strategy
+        self._warned_strategies: set = set()
+
+        # 不可恢复策略警告
+        if self.default_strategy in IRREVERSIBLE_STRATEGIES:
+            print(f"警告：默认策略 '{self.default_strategy}' 为不可恢复策略，脱敏后无法还原原始数据")
+            self._warned_strategies.add(self.default_strategy)
 
     def set_rules(self, rules: List[Rule]) -> None:
         """设置脱敏规则"""
@@ -150,7 +158,7 @@ class RedactionEngine:
                     continue
 
                 original = match.group()
-                redacted = self._redact_match(original, rule)
+                redacted = self._redact_match(original, rule, match=match)
 
                 replacements.append((match_start, match_end, redacted))
 
@@ -172,36 +180,44 @@ class RedactionEngine:
 
         return redacted_text, records
 
-    def _redact_match(self, text: str, rule: Rule) -> str:
+    def _redact_match(self, text: str, rule: Rule, match: Optional[re.Match] = None) -> str:
         """
         对匹配的文本执行脱敏
 
         Args:
             text: 匹配的文本
             rule: 使用的规则
+            match: 正则匹配对象（company策略需要使用命名捕获组）
 
         Returns:
             str: 脱敏后的文本
         """
-        # 如果设置覆盖模式，使用引擎默认模式
-        if self.override_mode:
-            mode = self.default_mode
+        # 如果设置覆盖策略，使用引擎默认策略
+        if self.override_strategy:
+            strategy = self.default_strategy
         else:
-            mode = rule.mode or self.default_mode
+            strategy = rule.strategy or self.default_strategy
 
-        if mode == "replace":
-            return self._replace_mode(text, rule)
-        elif mode == "mask":
-            return self._mask_mode(text)
-        elif mode == "partial":
-            return self._partial_mode(text, rule)
+        # 不可恢复策略警告（每种策略只警告一次）
+        if strategy in IRREVERSIBLE_STRATEGIES and strategy not in self._warned_strategies:
+            print(f"警告：策略 '{strategy}' 为不可恢复策略，脱敏后无法还原原始数据")
+            self._warned_strategies.add(strategy)
+
+        if strategy == "replace":
+            return self._replace_strategy(text, rule)
+        elif strategy == "mask":
+            return self._mask_strategy(text)
+        elif strategy == "partial":
+            return self._partial_strategy(text, rule)
+        elif strategy == "company":
+            return self._company_strategy(text, rule, match)
         else:
-            # 默认使用遮蔽模式
-            return self._mask_mode(text)
+            # 默认使用遮蔽策略
+            return self._mask_strategy(text)
 
-    def _replace_mode(self, text: str, rule: Rule) -> str:
+    def _replace_strategy(self, text: str, rule: Rule) -> str:
         """
-        替换模式：完全替换为指定文本
+        替换策略：完全替换为指定文本
 
         Args:
             text: 原始文本
@@ -213,12 +229,13 @@ class RedactionEngine:
         replacement = rule.replacement or self.replacement_text
         return replacement
 
-    def _mask_mode(self, text: str) -> str:
+    def _mask_strategy(self, text: str) -> str:
+        """遮蔽策略：完全用星号遮蔽"""
         return "*" * len(text)
 
-    def _partial_mode(self, text: str, rule: Rule) -> str:
+    def _partial_strategy(self, text: str, rule: Rule) -> str:
         """
-        部分显示模式：显示前后部分
+        部分显示策略：显示前后部分，中间遮蔽
 
         Args:
             text: 原始文本
@@ -231,8 +248,7 @@ class RedactionEngine:
         suffix = rule.show_suffix
 
         if len(text) <= prefix + suffix:
-            # 文本太短，使用遮蔽模式
-            return self._mask_mode(text)
+            return self._mask_strategy(text)
 
         show_prefix = text[:prefix]
         show_suffix = text[-suffix:]
@@ -240,6 +256,44 @@ class RedactionEngine:
         masked = "*" * mask_length
 
         return f"{show_prefix}{masked}{show_suffix}"
+
+    def _company_strategy(self, text: str, rule: Rule, match: Optional[re.Match] = None) -> str:
+        """
+        公司名称脱敏策略：保留地名前缀和公司类型后缀，遮蔽中间字号部分
+
+        这是针对公司名称数据类型的特殊脱敏策略，本质上是 partial 方式的变体。
+        依赖正则模式中的命名捕获组：
+        - geo: 地理前缀（省份/城市）
+        - district: 区/县（可选）
+        - name: 公司名称核心（被遮蔽部分）
+        - type: 公司类型后缀
+
+        Args:
+            text: 原始匹配文本
+            rule: 使用的规则
+            match: 正则匹配对象（包含命名捕获组）
+
+        Returns:
+            str: 脱敏后的文本，如 "杭州****有限公司"
+        """
+        if match is None:
+            return self._mask_strategy(text)
+
+        try:
+            geo = match.group("geo") or ""
+            district = match.group("district") or ""
+            name = match.group("name") or ""
+            type_suffix = match.group("type") or ""
+        except IndexError:
+            return self._mask_strategy(text)
+
+        prefix = geo + district
+
+        if name:
+            masked = "*" * len(name)
+            return f"{prefix}{masked}{type_suffix}"
+        else:
+            return self._mask_strategy(text)
 
     def _clone_document(self, document: ParsedDocument) -> ParsedDocument:
         """
@@ -312,30 +366,30 @@ class RedactionEngine:
         return {
             "rule_count": len(self.rules),
             "enabled_rule_count": sum(1 for r in self.rules if r.enabled),
-            "default_mode": self.default_mode,
+            "default_strategy": self.default_strategy,
             "replacement_text": self.replacement_text,
-            "override_mode": self.override_mode,
+            "override_strategy": self.override_strategy,
         }
 
 
 def create_engine(
     rules: Optional[List[Rule]] = None,
-    mode: str = "mask",
-    replacement: str = "****",
-    override_mode: bool = False,
+    strategy: str = "replace",
+    replacement: str = "[已脱敏]",
+    override_strategy: bool = False,
 ) -> RedactionEngine:
     """
-    便捷函数：创建脱了敏引擎
+    便捷函数：创建脱敏引擎
 
     Args:
         rules: 脱敏规则列表
-        mode: 脱敏模式
+        strategy: 脱敏策略
         replacement: 替换文本
-        override_mode: 是否覆盖规则的默认模式
+        override_strategy: 是否覆盖规则的默认策略
 
     Returns:
         RedactionEngine: 脱敏引擎实例
     """
     return RedactionEngine(
-        rules=rules, default_mode=mode, replacement_text=replacement, override_mode=override_mode
+        rules=rules, default_strategy=strategy, replacement_text=replacement, override_strategy=override_strategy
     )

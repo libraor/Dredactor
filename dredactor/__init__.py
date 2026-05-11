@@ -13,6 +13,12 @@ from .redaction_mapper import (
     MARKER_PREFIX,
     MARKER_SUFFIX,
 )
+from .models import (
+    RedactionMethod,
+    RedactionStrategy,
+    IRREVERSIBLE_STRATEGIES,
+    Rule,
+)
 
 # AI模块（可选）
 try:
@@ -38,6 +44,10 @@ __all__ = [
     "RedactionMapData",
     "MARKER_PREFIX",
     "MARKER_SUFFIX",
+    "RedactionMethod",
+    "RedactionStrategy",
+    "IRREVERSIBLE_STRATEGIES",
+    "Rule",
     "AI_AVAILABLE",
 ]
 
