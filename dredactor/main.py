@@ -20,6 +20,7 @@ from dredactor import (
     create_mapper,
     AI_AVAILABLE,
 )
+from dredactor.exceptions import DredactorError
 
 if AI_AVAILABLE:
     from dredactor import create_ai_redactor
@@ -109,12 +110,9 @@ def process_document(
 
             # 保存映射
             map_path = os.path.join(mapper.MAPPINGS_DIR, f"{map_id}.json")
-            if mapper.save_map(map_data, map_path):
-                print(f"映射ID: {map_id}")
-                print(f"已保存映射文件: {map_path}")
-            else:
-                print("保存映射文件失败")
-                raise typer.Exit(1)
+            mapper.save_map(map_data, map_path)
+            print(f"映射ID: {map_id}")
+            print(f"已保存映射文件: {map_path}")
 
             # 使用带特征码的文档导出
             redacted_to_export = redacted_doc
@@ -130,11 +128,8 @@ def process_document(
         # 导出文档
         print(f"正在导出文档: {output}")
         exporter = DocumentExporter()
-        if exporter.export(redacted_to_export, output):
-            print(f"成功导出到: {output}")
-        else:
-            print("导出失败")
-            raise typer.Exit(1)
+        exporter.export(redacted_to_export, output)
+        print(f"成功导出到: {output}")
 
         # 显示映射摘要
         if map_data:
@@ -156,8 +151,11 @@ def process_document(
 
         print("\n处理完成!")
 
-    except Exception as e:
+    except DredactorError as e:
         print(f"错误: {str(e)}")
+        raise typer.Exit(1)
+    except Exception as e:
+        print(f"未预期的错误: {str(e)}")
         raise typer.Exit(1)
 
 
@@ -211,19 +209,18 @@ def restore_document(
 
         # 执行恢复
         print("\n正在恢复...")
-        success, restored_doc = mapper.restore_document(
+        mapper.restore_document(
             redacted_file_path=redacted_file, output_path=output, map_path=map_file
         )
 
-        if success:
-            print(f"成功恢复到: {output}")
-            print("\n恢复完成!")
-        else:
-            print("恢复失败")
-            raise typer.Exit(1)
+        print(f"成功恢复到: {output}")
+        print("\n恢复完成!")
 
-    except Exception as e:
+    except DredactorError as e:
         print(f"错误: {str(e)}")
+        raise typer.Exit(1)
+    except Exception as e:
+        print(f"未预期的错误: {str(e)}")
         raise typer.Exit(1)
 
 

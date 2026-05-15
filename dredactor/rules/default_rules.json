@@ -29,7 +29,7 @@
     {
       "name": "bank_card",
       "description": "银行卡号(16-19位)",
-      "pattern": "\\d{16,19}",
+      "pattern": "\\b\\d{16,19}\\b",
       "enabled": true,
       "strategy": "mask",
       "priority": 10
@@ -85,7 +85,7 @@
     {
       "name": "passport_number",
       "description": "护照号码(字母+数字)",
-      "pattern": "[A-Za-z]{1,2}\\d{7,9}",
+      "pattern": "\\b[A-Za-z]{1,2}\\d{7,9}\\b",
       "enabled": true,
       "strategy": "replace",
       "priority": 9
@@ -93,7 +93,7 @@
     {
       "name": "driving_license",
       "description": "驾驶证号码",
-      "pattern": "\\d{12,18}",
+      "pattern": "\\b\\d{12,18}\\b",
       "enabled": true,
       "strategy": "replace",
       "priority": 9
@@ -101,7 +101,7 @@
     {
       "name": "qq_number",
       "description": "QQ号",
-      "pattern": "[1-9][0-9]{4,10}",
+      "pattern": "\\b[1-9][0-9]{4,10}\\b",
       "enabled": false,
       "strategy": "replace",
       "priority": 5
@@ -109,7 +109,7 @@
     {
       "name": "wechat_id",
       "description": "微信号(字母开头，6-20位)",
-      "pattern": "[a-zA-Z][-_a-zA-Z0-9]{5,19}",
+      "pattern": "\\b[a-zA-Z][-_a-zA-Z0-9]{5,19}\\b",
       "enabled": false,
       "strategy": "replace",
       "priority": 5

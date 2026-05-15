@@ -6,6 +6,9 @@ from datetime import datetime
 from typing import Optional
 
 from .models import RedactionResult
+from .logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class ReportGenerator:
@@ -74,8 +77,9 @@ class ReportGenerator:
             return True
 
         except Exception as e:
-            print(f"错误：生成报告失败 - {str(e)}")
-            return False
+            from .exceptions import ReportError
+            logger.error("生成报告失败: %s", e)
+            raise ReportError(output_path, str(e)) from e
 
     def _generate_json_report(
         self, result: RedactionResult, output_path: str
@@ -113,8 +117,9 @@ class ReportGenerator:
             return True
 
         except Exception as e:
-            print(f"错误：生成JSON报告失败 - {str(e)}")
-            return False
+            from .exceptions import ReportError
+            logger.error("生成JSON报告失败: %s", e)
+            raise ReportError(output_path, str(e)) from e
 
     def _generate_markdown_report(
         self, result: RedactionResult, output_path: str
@@ -182,8 +187,9 @@ class ReportGenerator:
             return True
 
         except Exception as e:
-            print(f"错误：生成Markdown报告失败 - {str(e)}")
-            return False
+            from .exceptions import ReportError
+            logger.error("生成Markdown报告失败: %s", e)
+            raise ReportError(output_path, str(e)) from e
 
     def _generate_summary(self, result: RedactionResult) -> dict:
         """

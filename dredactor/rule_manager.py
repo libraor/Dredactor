@@ -7,7 +7,10 @@ from typing import Dict, List, Optional
 
 import yaml
 
+from .logger import get_logger
 from .models import Rule, IRREVERSIBLE_STRATEGIES
+
+logger = get_logger(__name__)
 
 
 class RuleManager:
@@ -100,9 +103,9 @@ class RuleManager:
                 self._resolve_dynamic_patterns()
 
             except Exception as e:
-                print(f"警告：加载默认规则失败 - {str(e)}")
+                logger.warning("加载默认规则失败 - %s", str(e))
         else:
-            print(f"警告：默认规则文件不存在 - {self.default_rules_path}")
+            logger.warning("默认规则文件不存在 - %s", self.default_rules_path)
 
     def _load_custom_rules(self) -> None:
         """加载自定义规则"""
@@ -120,7 +123,7 @@ class RuleManager:
                 self.groups.update(data.get("groups", {}))
 
             except Exception as e:
-                print(f"警告：加载自定义规则失败 - {str(e)}")
+                logger.warning("加载自定义规则失败 - %s", str(e))
 
     def _sort_rules_by_priority(self) -> None:
         """按优先级排序规则（优先级高的在前）"""
@@ -172,25 +175,25 @@ class RuleManager:
         """验证规则"""
         # 检查规则名称
         if not rule.name or not isinstance(rule.name, str):
-            print("错误：规则名称无效")
+            logger.error("规则名称无效")
             return False
 
         # 检查正则表达式
         try:
             re.compile(rule.pattern)
         except re.error as e:
-            print(f"错误：正则表达式无效 - {str(e)}")
+            logger.error("正则表达式无效 - %s", str(e))
             return False
 
         # 检查脱敏策略
         valid_strategies = ["replace", "mask", "partial", "company"]
         if rule.strategy not in valid_strategies:
-            print(f"错误：脱敏策略无效，必须是 {valid_strategies} 之一")
+            logger.error("脱敏策略无效，必须是 %s 之一", valid_strategies)
             return False
 
         # 不可恢复策略警告
         if rule.strategy in IRREVERSIBLE_STRATEGIES:
-            print(f"警告：策略 '{rule.strategy}' 为不可恢复策略，脱敏后无法还原原始数据")
+            logger.warning("策略 '%s' 为不可恢复策略，脱敏后无法还原原始数据", rule.strategy)
 
         return True
 
@@ -230,7 +233,7 @@ class RuleManager:
             return True
 
         except Exception as e:
-            print(f"错误：保存自定义规则失败 - {str(e)}")
+            logger.error("保存自定义规则失败 - %s", str(e))
             return False
 
     def remove_rule(self, name: str) -> bool:
@@ -263,7 +266,7 @@ class RuleManager:
             return True
 
         except Exception as e:
-            print(f"错误：删除规则失败 - {str(e)}")
+            logger.error("删除规则失败 - %s", str(e))
             return False
 
     def enable_rule(self, name: str) -> bool:
@@ -350,11 +353,11 @@ class RuleManager:
                     self.rules[rule.name] = rule
                     imported_count += 1
 
-            print(f"成功导入 {imported_count} 条规则")
+            logger.info("成功导入 %d 条规则", imported_count)
             return True
 
         except Exception as e:
-            print(f"错误：导入规则失败 - {str(e)}")
+            logger.error("导入规则失败 - %s", str(e))
             return False
 
     def export_rules_to_file(self, file_path: str, enabled_only: bool = False) -> bool:
@@ -381,11 +384,11 @@ class RuleManager:
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
-            print(f"成功导出 {len(rules)} 条规则到 {file_path}")
+            logger.info("成功导出 %d 条规则到 %s", len(rules), file_path)
             return True
 
         except Exception as e:
-            print(f"错误：导出规则失败 - {str(e)}")
+            logger.error("导出规则失败 - %s", str(e))
             return False
 
     def _resolve_dynamic_patterns(self) -> None:
@@ -402,7 +405,7 @@ class RuleManager:
                     rule.pattern = generated
                 else:
                     rule.enabled = False
-                    print(f"警告：动态模式生成失败，已禁用规则 '{name}'")
+                    logger.warning("动态模式生成失败，已禁用规则 '%s'", name)
 
     def _get_place_names_path(self) -> str:
         """获取地名数据文件路径"""
@@ -417,10 +420,10 @@ class RuleManager:
                 with open(path, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
-                print(f"警告：加载地名数据失败 - {str(e)}")
+                logger.warning("加载地名数据失败 - %s", str(e))
                 return {}
         else:
-            print(f"警告：地名数据文件不存在 - {path}")
+            logger.warning("地名数据文件不存在 - %s", path)
             return {}
 
     def _generate_company_pattern(self) -> str:

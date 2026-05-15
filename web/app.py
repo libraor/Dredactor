@@ -289,10 +289,10 @@ elif page == "规则管理":
                     st.rerun()
             with col2:
                 st.selectbox(
-                    "模式",
-                    options=["mask", "replace", "partial"],
-                    index=["mask", "replace", "partial"].index(rule.mode),
-                    key=f"mode_{rule.name}",
+                    "策略",
+                    options=["mask", "replace", "partial", "company"],
+                    index=["mask", "replace", "partial", "company"].index(rule.strategy),
+                    key=f"strategy_{rule.name}",
                     disabled=True,
                 )
             with col3:
@@ -302,7 +302,7 @@ elif page == "规则管理":
                     "name": rule.name,
                     "description": rule.description,
                     "pattern": rule.pattern,
-                    "mode": rule.mode,
+                    "strategy": rule.strategy,
                     "priority": rule.priority,
                     "enabled": rule.enabled,
                     "replacement": rule.replacement,

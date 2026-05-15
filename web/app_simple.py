@@ -80,7 +80,9 @@ with st.sidebar:
     )
     st.markdown("---")
     with st.expander("规则统计"):
-        rule_manager = load_rules()
+        if "rule_manager" not in st.session_state:
+            st.session_state.rule_manager = load_rules()
+        rule_manager = st.session_state.rule_manager
         all_rules = rule_manager.get_all_rules()
         enabled_rules = rule_manager.get_enabled_rules()
         st.metric("总规则数", len(all_rules))
@@ -269,7 +271,9 @@ elif page == "文档恢复":
 
 elif page == "规则管理":
     st.header("规则管理")
-    rule_manager = load_rules()
+    if "rule_manager" not in st.session_state:
+        st.session_state.rule_manager = load_rules()
+    rule_manager = st.session_state.rule_manager
     all_rules = rule_manager.get_all_rules()
     search = st.text_input("搜索规则", placeholder="输入规则名称或描述...")
     st.markdown("### 规则列表")
@@ -289,10 +293,10 @@ elif page == "规则管理":
                     st.rerun()
             with col2:
                 st.selectbox(
-                    "模式",
-                    options=["mask", "replace", "partial"],
-                    index=["mask", "replace", "partial"].index(rule.mode),
-                    key=f"mode_{rule.name}",
+                    "策略",
+                    options=["mask", "replace", "partial", "company"],
+                    index=["mask", "replace", "partial", "company"].index(rule.strategy),
+                    key=f"strategy_{rule.name}",
                     disabled=True,
                 )
             with col3:
@@ -302,7 +306,7 @@ elif page == "规则管理":
                     "name": rule.name,
                     "description": rule.description,
                     "pattern": rule.pattern,
-                    "mode": rule.mode,
+                    "strategy": rule.strategy,
                     "priority": rule.priority,
                     "enabled": rule.enabled,
                     "replacement": rule.replacement,

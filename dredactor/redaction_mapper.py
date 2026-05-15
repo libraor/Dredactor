@@ -7,6 +7,10 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 from .models.base import ParsedDocument, RedactionRecord, TextBlock, Table, TableCell
+from .logger import get_logger
+from .utils import clone_document
+
+logger = get_logger(__name__)
 
 # 特征码标记格式
 MARKER_PREFIX = "【*"
@@ -188,8 +192,10 @@ class RedactionMapper:
                 json.dump(map_data.to_dict(), f, ensure_ascii=False, indent=2)
 
             return True
-        except Exception:
-            return False
+        except Exception as e:
+            from .exceptions import MappingSaveError
+            logger.error("映射保存失败: %s", str(e))
+            raise MappingSaveError(map_data.map_id, str(e)) from e
 
     def load_map(self, map_path: str) -> Optional[RedactionMapData]:
         """加载映射文件
@@ -204,8 +210,10 @@ class RedactionMapper:
             with open(map_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             return RedactionMapData.from_dict(data)
-        except Exception:
-            return None
+        except Exception as e:
+            from .exceptions import MappingLoadError
+            logger.error("映射加载失败: %s", str(e))
+            raise MappingLoadError(map_path, str(e)) from e
 
     def extract_map_id_from_filename(self, filename: str) -> Optional[str]:
         """从文件名提取映射ID
@@ -255,9 +263,8 @@ class RedactionMapper:
         Returns:
             ParsedDocument: 应用标记后的文档
         """
-        from .redaction_engine import RedactionEngine
-        engine = RedactionEngine()
-        redacted_doc = engine._clone_document(document)
+        from .utils import clone_document
+        redacted_doc = clone_document(document)
 
         location_mappings = {}
         for mapping in map_data.mappings:
@@ -374,8 +381,10 @@ class RedactionMapper:
             exporter.export(restored_doc, output_path, overwrite=True, original_file_path=redacted_file_path)
 
             return True, restored_doc
-        except Exception:
-            return False, None
+        except Exception as e:
+            from .exceptions import RestoreError
+            logger.error("文档恢复失败: %s", str(e))
+            raise RestoreError(str(e)) from e
 
     def _restore_document_content(self, document: ParsedDocument, map_data: RedactionMapData) -> ParsedDocument:
         """恢复文档内容
@@ -387,9 +396,7 @@ class RedactionMapper:
         Returns:
             ParsedDocument: 恢复后的文档
         """
-        from .redaction_engine import RedactionEngine
-        engine = RedactionEngine()
-        restored_doc = engine._clone_document(document)
+        restored_doc = clone_document(document)
 
         # 创建标记到原始文本的映射
         marker_map = {}

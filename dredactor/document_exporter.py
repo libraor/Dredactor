@@ -12,6 +12,9 @@ from docx.oxml.text.paragraph import CT_P
 from docx.shared import Pt
 
 from .models import ParsedDocument, TextBlock, Table, TableCell
+from .logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class DocumentExporter:
@@ -52,8 +55,8 @@ class DocumentExporter:
             bool: 是否导出成功
         """
         if os.path.exists(output_path) and not overwrite:
-            print(f"错误：文件已存在={output_path}")
-            return False
+            from .exceptions import FileExistsError_
+            raise FileExistsError_(output_path)
 
         try:
             if self.preserve_formatting and (original_file_path or parsed_doc.file_path):
@@ -64,8 +67,9 @@ class DocumentExporter:
             return self._export_new_document(parsed_doc, output_path)
 
         except Exception as e:
-            print(f"错误：导出文档失败={str(e)}")
-            return False
+            from .exceptions import ExportError
+            logger.error("导出文档失败: %s", e)
+            raise ExportError(output_path, str(e)) from e
 
     def _export_with_original_format(
         self,
@@ -108,8 +112,9 @@ class DocumentExporter:
             return True
 
         except Exception as e:
-            print(f"错误：保留格式导出失败={str(e)}")
-            return False
+            from .exceptions import ExportError
+            logger.error("保留格式导出失败: %s", e)
+            raise ExportError(output_path, str(e)) from e
 
     def _update_paragraph_text(self, para: Paragraph, new_text: str) -> None:
         """
@@ -213,8 +218,9 @@ class DocumentExporter:
             return True
 
         except Exception as e:
-            print(f"错误：创建新文档失败={str(e)}")
-            return False
+            from .exceptions import ExportError
+            logger.error("创建新文档失败: %s", e)
+            raise ExportError(output_path, str(e)) from e
 
     def _export_paragraphs(self, doc: Document, parsed_doc: ParsedDocument) -> None:
         """导出段落"""

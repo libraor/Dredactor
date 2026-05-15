@@ -2,11 +2,15 @@
 
 from typing import List, Optional, Tuple
 
+from .logger import get_logger
+
 try:
     import openai
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
+
+logger = get_logger(__name__)
 
 
 class AIRedactor:
@@ -117,7 +121,7 @@ class AIRedactor:
             return redacted_text, redaction_records
 
         except Exception as e:
-            print(f"AI脱敏失败: {str(e)}")
+            logger.error("AI脱敏失败: %s", e)
             # 失败时返回原文
             return text, []
 
@@ -157,8 +161,9 @@ class AIRedactor:
         return []
 
     def _apply_redaction(self, text: str, records: List[dict]) -> str:
-        """
-        应用脱敏记录到文本
+        """应用脱敏记录到文本
+
+        基于位置替换，避免 str.replace() 的全局替换导致误替换。
 
         Args:
             text: 原始文本
@@ -170,11 +175,21 @@ class AIRedactor:
         if not records:
             return text
 
-        result = text
-        for record in reversed(records):  # 从后往前替换，避免位置偏移
+        replacements = []
+        for record in records:
             original = record.get("original", "")
             replacement = record.get("suggested_replacement", "***")
-            result = result.replace(original, replacement)
+            if not original:
+                continue
+            idx = text.find(original)
+            if idx != -1:
+                replacements.append((idx, idx + len(original), replacement))
+
+        replacements.sort(key=lambda x: x[0], reverse=True)
+
+        result = text
+        for start, end, replacement in replacements:
+            result = result[:start] + replacement + result[end:]
 
         return result
 
@@ -245,5 +260,5 @@ def create_ai_redactor(
     try:
         return AIRedactor(api_key=api_key, model=model, api_base=api_base)
     except ImportError:
-        print("警告：OpenAI库未安装，AI功能不可用")
+        logger.warning("OpenAI库未安装，AI功能不可用")
         return None

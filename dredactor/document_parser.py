@@ -11,6 +11,10 @@ from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
 
 from .models import ParsedDocument, TextBlock, Table, TableCell
+from .exceptions import ParseError, InvalidFileFormatError
+from .logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class DocumentParser:
@@ -51,7 +55,7 @@ class DocumentParser:
             raise FileNotFoundError(f"文件不存在: {file_path}")
 
         if not file_path.lower().endswith(".docx"):
-            raise ValueError("仅支持.docx格式的Word文档")
+            raise InvalidFileFormatError(file_path)
 
         try:
             # 加载Word文档
@@ -73,7 +77,7 @@ class DocumentParser:
             return parsed_doc
 
         except Exception as e:
-            raise Exception(f"文档解析失败: {str(e)}")
+            raise ParseError(file_path, str(e)) from e
 
     def _get_document_title(self, docx: DocxDocument) -> str:
         """

@@ -4,6 +4,8 @@ import re
 import time
 from typing import List, Optional, Tuple
 
+from .logger import get_logger
+from .utils import clone_document
 from .models import (
     ParsedDocument,
     RedactionMethod,
@@ -17,6 +19,8 @@ from .models import (
     TextBlock,
     IRREVERSIBLE_STRATEGIES,
 )
+
+logger = get_logger(__name__)
 
 
 class RedactionEngine:
@@ -53,7 +57,7 @@ class RedactionEngine:
 
         # 不可恢复策略警告
         if self.default_strategy in IRREVERSIBLE_STRATEGIES:
-            print(f"警告：默认策略 '{self.default_strategy}' 为不可恢复策略，脱敏后无法还原原始数据")
+            logger.warning("默认策略 '%s' 为不可恢复策略，脱敏后无法还原原始数据", self.default_strategy)
             self._warned_strategies.add(self.default_strategy)
 
     def set_rules(self, rules: List[Rule]) -> None:
@@ -200,19 +204,18 @@ class RedactionEngine:
 
         # 不可恢复策略警告（每种策略只警告一次）
         if strategy in IRREVERSIBLE_STRATEGIES and strategy not in self._warned_strategies:
-            print(f"警告：策略 '{strategy}' 为不可恢复策略，脱敏后无法还原原始数据")
+            logger.warning("策略 '%s' 为不可恢复策略，脱敏后无法还原原始数据", strategy)
             self._warned_strategies.add(strategy)
 
-        if strategy == "replace":
+        if strategy == RedactionStrategy.REPLACE.value:
             return self._replace_strategy(text, rule)
-        elif strategy == "mask":
+        elif strategy == RedactionStrategy.MASK.value:
             return self._mask_strategy(text)
-        elif strategy == "partial":
+        elif strategy == RedactionStrategy.PARTIAL.value:
             return self._partial_strategy(text, rule)
-        elif strategy == "company":
+        elif strategy == RedactionStrategy.COMPANY.value:
             return self._company_strategy(text, rule, match)
         else:
-            # 默认使用遮蔽策略
             return self._mask_strategy(text)
 
     def _replace_strategy(self, text: str, rule: Rule) -> str:
@@ -296,65 +299,8 @@ class RedactionEngine:
             return self._mask_strategy(text)
 
     def _clone_document(self, document: ParsedDocument) -> ParsedDocument:
-        """
-        创建文档的深拷贝
-
-        Args:
-            document: 原始文档
-
-        Returns:
-            ParsedDocument: 文档副本
-        """
-        # 创建新文档对象
-        cloned = ParsedDocument(
-            file_path=document.file_path,
-            file_name=document.file_name,
-            title=document.title,
-        )
-
-        # 复制段落
-        cloned.paragraphs = [
-            TextBlock(
-                text=para.text,
-                type=para.type,
-                location=para.location,
-                metadata=para.metadata.copy(),
-                font_name=para.font_name,
-                font_size=para.font_size,
-                bold=para.bold,
-                italic=para.italic,
-                underline=para.underline,
-            )
-            for para in document.paragraphs
-        ]
-
-        # 复制表格
-        cloned.tables = []
-        for table in document.tables:
-            cloned_table = Table(location=table.location, metadata=table.metadata.copy())
-
-            for row in table.rows:
-                cloned_row = []
-                for cell in row:
-                    cloned_cell = TableCell(
-                        text=cell.text,
-                        row=cell.row,
-                        col=cell.col,
-                        metadata=cell.metadata.copy(),
-                    )
-                    cloned_row.append(cloned_cell)
-                cloned_table.rows.append(cloned_row)
-
-            cloned.tables.append(cloned_table)
-
-        # 复制页眉页脚
-        cloned.headers = document.headers.copy()
-        cloned.footers = document.footers.copy()
-
-        # 复制元数据
-        cloned.metadata = document.metadata.copy()
-
-        return cloned
+        """创建文档的深拷贝"""
+        return clone_document(document)
 
     def get_stats(self) -> dict:
         """

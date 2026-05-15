@@ -19,6 +19,27 @@ from .models import (
     IRREVERSIBLE_STRATEGIES,
     Rule,
 )
+from .exceptions import (
+    DredactorError,
+    ParseError,
+    InvalidFileFormatError,
+    RedactionError,
+    InvalidStrategyError,
+    InvalidRuleError,
+    ExportError,
+    MappingError,
+    MappingSaveError,
+    MappingLoadError,
+    MappingNotFoundError,
+    RestoreError,
+    ReportError,
+    RuleManagerError,
+    RuleLoadError,
+    RuleValidationError,
+    AIError,
+)
+from .utils import clone_document
+from .logger import get_logger, setup_logger
 
 # AI模块（可选）
 try:
@@ -49,6 +70,26 @@ __all__ = [
     "IRREVERSIBLE_STRATEGIES",
     "Rule",
     "AI_AVAILABLE",
+    "DredactorError",
+    "ParseError",
+    "InvalidFileFormatError",
+    "RedactionError",
+    "InvalidStrategyError",
+    "InvalidRuleError",
+    "ExportError",
+    "MappingError",
+    "MappingSaveError",
+    "MappingLoadError",
+    "MappingNotFoundError",
+    "RestoreError",
+    "ReportError",
+    "RuleManagerError",
+    "RuleLoadError",
+    "RuleValidationError",
+    "AIError",
+    "clone_document",
+    "get_logger",
+    "setup_logger",
 ]
 
 if AI_AVAILABLE:

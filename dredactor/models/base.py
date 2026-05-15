@@ -1,5 +1,7 @@
 """Dredactor核心数据模型定义"""
 
+import os
+import warnings
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -77,17 +79,48 @@ class Rule:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Rule":
         """从字典创建规则"""
+        strategy = data.get("strategy")
+        if strategy is None:
+            mode = data.get("mode")
+            if mode is not None:
+                warnings.warn(
+                    "Rule 字段 'mode' 已废弃，请使用 'strategy'",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                strategy = mode
+            else:
+                strategy = "replace"
         return cls(
             name=data.get("name", ""),
             pattern=data.get("pattern", ""),
             description=data.get("description", ""),
             enabled=data.get("enabled", True),
-            strategy=data.get("strategy", data.get("mode", "replace")),  # 兼容旧字段名
+            strategy=strategy,
             priority=data.get("priority", 10),
             replacement=data.get("replacement"),
             show_prefix=data.get("show_prefix", 3),
             show_suffix=data.get("show_suffix", 4),
         )
+
+    @property
+    def mode(self) -> str:
+        """向后兼容：mode 是 strategy 的别名（已废弃）"""
+        warnings.warn(
+            "Rule.mode 已废弃，请使用 Rule.strategy",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.strategy
+
+    @mode.setter
+    def mode(self, value: str) -> None:
+        warnings.warn(
+            "Rule.mode 已废弃，请使用 Rule.strategy",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.strategy = value
 
 
 @dataclass
@@ -167,8 +200,6 @@ class ParsedDocument:
     def __post_init__(self):
         """初始化后处理"""
         if not self.file_name and self.file_path:
-            import os
-
             self.file_name = os.path.basename(self.file_path)
 
     @property
