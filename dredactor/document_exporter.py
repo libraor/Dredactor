@@ -283,7 +283,7 @@ class DocumentExporter:
         parsed_doc: ParsedDocument,
         suffix: str = "_redacted",
         overwrite: bool = False,
-    ) -> Optional[str]:
+    ) -> str:
         """
         导出文档到原文件目录，添加后缀
 
@@ -293,7 +293,7 @@ class DocumentExporter:
             overwrite: 是否覆盖已存在的文件
 
         Returns:
-            Optional[str]: 输出文件路径，失败返回None
+            str: 输出文件路径
 
         Raises:
             FileExistsError_: 文件已存在且未设置覆盖
@@ -301,12 +301,8 @@ class DocumentExporter:
         """
         base_path, ext = os.path.splitext(parsed_doc.file_path)
         output_path = f"{base_path}{suffix}{ext}"
-
-        try:
-            self.export(parsed_doc, output_path, overwrite)
-            return output_path
-        except Exception:
-            raise
+        self.export(parsed_doc, output_path, overwrite)
+        return output_path
 
     def export_batch(
         self,
