@@ -43,7 +43,7 @@ class ReportGenerator:
         self,
         result: RedactionResult,
         output_path: str,
-    ) -> bool:
+    ) -> None:
         """
         生成脱敏报告
 
@@ -51,11 +51,10 @@ class ReportGenerator:
             result: 脱敏结果对象
             output_path: 输出文件路径
 
-        Returns:
-            bool: 是否生成成功
+        Raises:
+            ReportError: 报告生成失败
         """
         try:
-            # 确保目录存在
             os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
 
             if self.format in ["json", "both"]:
@@ -63,18 +62,14 @@ class ReportGenerator:
                 if self.format == "both":
                     json_path = self._change_extension(output_path, "json")
 
-                if not self._generate_json_report(result, json_path):
-                    return False
+                self._generate_json_report(result, json_path)
 
             if self.format in ["markdown", "both"]:
                 md_path = output_path
                 if self.format == "both":
                     md_path = self._change_extension(output_path, "md")
 
-                if not self._generate_markdown_report(result, md_path):
-                    return False
-
-            return True
+                self._generate_markdown_report(result, md_path)
 
         except Exception as e:
             from .exceptions import ReportError
@@ -83,7 +78,7 @@ class ReportGenerator:
 
     def _generate_json_report(
         self, result: RedactionResult, output_path: str
-    ) -> bool:
+    ) -> None:
         """
         生成JSON格式报告
 
@@ -91,8 +86,8 @@ class ReportGenerator:
             result: 脱敏结果对象
             output_path: 输出文件路径
 
-        Returns:
-            bool: 是否生成成功
+        Raises:
+            ReportError: 报告生成失败
         """
         try:
             report = {
@@ -101,20 +96,15 @@ class ReportGenerator:
                 "summary": self._generate_summary(result),
             }
 
-            # 根据详细程度添加更多信息
             if self.detail_level in ["detailed", "full"]:
                 report["stats"] = result.stats.to_dict()
                 report["rules_used"] = list(result.stats.rules_used.keys())
 
-            # 添加脱敏对比
             if self.include_comparison and self.detail_level == "full":
                 report["comparison"] = self._generate_comparison(result)
 
-            # 写入文件
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(report, f, ensure_ascii=False, indent=2)
-
-            return True
 
         except Exception as e:
             from .exceptions import ReportError
@@ -123,7 +113,7 @@ class ReportGenerator:
 
     def _generate_markdown_report(
         self, result: RedactionResult, output_path: str
-    ) -> bool:
+    ) -> None:
         """
         生成Markdown格式报告
 
@@ -131,19 +121,17 @@ class ReportGenerator:
             result: 脱敏结果对象
             output_path: 输出文件路径
 
-        Returns:
-            bool: 是否生成成功
+        Raises:
+            ReportError: 报告生成失败
         """
         try:
             lines = []
 
-            # 标题
             lines.append("# Dredactor 脱敏报告")
             lines.append("")
             lines.append(f"**生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             lines.append("")
 
-            # 摘要
             lines.append("## 摘要")
             lines.append("")
             summary = self._generate_summary(result)
@@ -154,7 +142,6 @@ class ReportGenerator:
             lines.append(f"- **处理时间**: {summary['processing_time']:.3f}秒")
             lines.append("")
 
-            # 规则统计
             if self.detail_level in ["detailed", "full"]:
                 lines.append("## 规则使用统计")
                 lines.append("")
@@ -165,7 +152,6 @@ class ReportGenerator:
                     lines.append(f"| {rule_name} | {count} |")
                 lines.append("")
 
-            # 脱敏记录
             if self.detail_level == "full" and result.stats.records:
                 lines.append("## 脱敏详情")
                 lines.append("")
@@ -180,11 +166,8 @@ class ReportGenerator:
                     lines.append(f"- **位置**: {record.start_pos}-{record.end_pos}")
                     lines.append("")
 
-            # 写入文件
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write("\n".join(lines))
-
-            return True
 
         except Exception as e:
             from .exceptions import ReportError
@@ -314,7 +297,7 @@ def generate_report(
     format: str = "json",
     detail_level: str = "detailed",
     include_comparison: bool = False,
-) -> bool:
+) -> None:
     """
     便捷函数：生成脱敏报告
 
@@ -325,12 +308,12 @@ def generate_report(
         detail_level: 详细程度
         include_comparison: 是否包含对比
 
-    Returns:
-        bool: 是否生成成功
+    Raises:
+        ReportError: 报告生成失败
     """
     generator = ReportGenerator(
         format=format,
         detail_level=detail_level,
         include_comparison=include_comparison,
     )
-    return generator.generate(result, output_path)
+    generator.generate(result, output_path)

@@ -174,15 +174,15 @@ class RedactionMapper:
         # 使用原始起始位置，但长度是脱敏后的长度
         return (record.start_pos, record.start_pos + redacted_length)
 
-    def save_map(self, map_data: RedactionMapData, map_path: Optional[str] = None) -> bool:
+    def save_map(self, map_data: RedactionMapData, map_path: Optional[str] = None) -> None:
         """保存映射文件
 
         Args:
             map_data: 映射数据
             map_path: 映射文件路径（可选，默认保存到 .mappings/[map_id].json）
 
-        Returns:
-            bool: 是否成功
+        Raises:
+            MappingSaveError: 映射保存失败
         """
         try:
             if map_path is None:
@@ -191,20 +191,22 @@ class RedactionMapper:
             with open(map_path, "w", encoding="utf-8") as f:
                 json.dump(map_data.to_dict(), f, ensure_ascii=False, indent=2)
 
-            return True
         except Exception as e:
             from .exceptions import MappingSaveError
             logger.error("映射保存失败: %s", str(e))
             raise MappingSaveError(map_data.map_id, str(e)) from e
 
-    def load_map(self, map_path: str) -> Optional[RedactionMapData]:
+    def load_map(self, map_path: str) -> RedactionMapData:
         """加载映射文件
 
         Args:
             map_path: 映射文件路径
 
         Returns:
-            RedactionMapData: 映射数据，失败返回None
+            RedactionMapData: 映射数据
+
+        Raises:
+            MappingLoadError: 加载失败
         """
         try:
             with open(map_path, "r", encoding="utf-8") as f:
@@ -344,7 +346,7 @@ class RedactionMapper:
 
     def restore_document(
         self, redacted_file_path: str, output_path: str, map_path: Optional[str] = None
-    ) -> Tuple[bool, Optional[ParsedDocument]]:
+    ) -> ParsedDocument:
         """恢复脱敏文档
 
         Args:
@@ -353,34 +355,31 @@ class RedactionMapper:
             map_path: 映射文件路径（可选，默认从文件名推断）
 
         Returns:
-            Tuple[bool, Optional[ParsedDocument]]: (是否成功, 恢复后的文档)
+            ParsedDocument: 恢复后的文档
+
+        Raises:
+            RestoreError: 恢复失败
         """
         try:
-            # 确定映射文件路径
             if map_path is None:
                 map_path = self.get_map_path_from_redacted_file(redacted_file_path)
                 if not map_path:
-                    return False, None
+                    from .exceptions import RestoreError
+                    raise RestoreError(f"无法从文件名推断映射文件路径: {redacted_file_path}")
 
-            # 加载映射
             map_data = self.load_map(map_path)
-            if not map_data:
-                return False, None
 
-            # 解析脱敏文档
             from .document_parser import DocumentParser
             parser = DocumentParser()
             doc = parser.parse(redacted_file_path)
 
-            # 恢复文档
             restored_doc = self._restore_document_content(doc, map_data)
 
-            # 导出（使用脱敏文档作为原始文档以保留格式）
             from .document_exporter import DocumentExporter
             exporter = DocumentExporter()
             exporter.export(restored_doc, output_path, overwrite=True, original_file_path=redacted_file_path)
 
-            return True, restored_doc
+            return restored_doc
         except Exception as e:
             from .exceptions import RestoreError
             logger.error("文档恢复失败: %s", str(e))

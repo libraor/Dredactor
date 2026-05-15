@@ -1,17 +1,16 @@
 """文档导出器 - 生成脱敏后的Word文档，保留原始格式"""
 
 import os
-from typing import Optional, List, Tuple
+from typing import Optional
 
 from docx import Document
-from docx.document import Document as DocxDocument
 from docx.text.paragraph import Paragraph
 from docx.table import Table as DocxTable
 from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
 from docx.shared import Pt
 
-from .models import ParsedDocument, TextBlock, Table, TableCell
+from .models import ParsedDocument, TextBlock, Table
 from .logger import get_logger
 
 logger = get_logger(__name__)
@@ -41,7 +40,7 @@ class DocumentExporter:
         output_path: str,
         overwrite: bool = False,
         original_file_path: Optional[str] = None,
-    ) -> bool:
+    ) -> None:
         """
         导出文档到Word文件
 
@@ -51,8 +50,9 @@ class DocumentExporter:
             overwrite: 是否覆盖已存在的文件
             original_file_path: 原始文档路径（用于保留格式）
 
-        Returns:
-            bool: 是否导出成功
+        Raises:
+            FileExistsError_: 文件已存在且未设置覆盖
+            ExportError: 导出失败
         """
         if os.path.exists(output_path) and not overwrite:
             from .exceptions import FileExistsError_
@@ -62,9 +62,10 @@ class DocumentExporter:
             if self.preserve_formatting and (original_file_path or parsed_doc.file_path):
                 source_path = original_file_path or parsed_doc.file_path
                 if os.path.exists(source_path):
-                    return self._export_with_original_format(parsed_doc, output_path, source_path)
+                    self._export_with_original_format(parsed_doc, output_path, source_path)
+                    return
 
-            return self._export_new_document(parsed_doc, output_path)
+            self._export_new_document(parsed_doc, output_path)
 
         except Exception as e:
             from .exceptions import ExportError
@@ -76,7 +77,7 @@ class DocumentExporter:
         parsed_doc: ParsedDocument,
         output_path: str,
         original_file_path: str,
-    ) -> bool:
+    ) -> None:
         """
         基于原始文档导出，保留所有格式
 
@@ -85,8 +86,8 @@ class DocumentExporter:
             output_path: 输出文件路径
             original_file_path: 原始文档路径
 
-        Returns:
-            bool: 是否导出成功
+        Raises:
+            ExportError: 导出失败
         """
         try:
             doc = Document(original_file_path)
@@ -109,7 +110,6 @@ class DocumentExporter:
                         table_idx += 1
 
             doc.save(output_path)
-            return True
 
         except Exception as e:
             from .exceptions import ExportError
@@ -194,7 +194,7 @@ class DocumentExporter:
         self,
         parsed_doc: ParsedDocument,
         output_path: str,
-    ) -> bool:
+    ) -> None:
         """
         创建新文档导出（不保留原始格式）
 
@@ -202,8 +202,8 @@ class DocumentExporter:
             parsed_doc: 解析后的文档对象
             output_path: 输出文件路径
 
-        Returns:
-            bool: 是否导出成功
+        Raises:
+            ExportError: 导出失败
         """
         try:
             doc = Document()
@@ -215,7 +215,6 @@ class DocumentExporter:
             self._export_tables(doc, parsed_doc)
 
             doc.save(output_path)
-            return True
 
         except Exception as e:
             from .exceptions import ExportError
@@ -295,14 +294,19 @@ class DocumentExporter:
 
         Returns:
             Optional[str]: 输出文件路径，失败返回None
+
+        Raises:
+            FileExistsError_: 文件已存在且未设置覆盖
+            ExportError: 导出失败
         """
         base_path, ext = os.path.splitext(parsed_doc.file_path)
         output_path = f"{base_path}{suffix}{ext}"
 
-        if self.export(parsed_doc, output_path, overwrite):
+        try:
+            self.export(parsed_doc, output_path, overwrite)
             return output_path
-        else:
-            return None
+        except Exception:
+            raise
 
     def export_batch(
         self,
@@ -322,6 +326,10 @@ class DocumentExporter:
 
         Returns:
             dict: 导出结果统计
+
+        Raises:
+            FileExistsError_: 文件已存在且未设置覆盖
+            ExportError: 导出失败
         """
         os.makedirs(output_dir, exist_ok=True)
 
@@ -336,14 +344,15 @@ class DocumentExporter:
             base_name, ext = os.path.splitext(parsed_doc.file_name)
             output_path = os.path.join(output_dir, f"{base_name}{suffix}{ext}")
 
-            if self.export(parsed_doc, output_path, overwrite):
+            try:
+                self.export(parsed_doc, output_path, overwrite)
                 results["success"] += 1
                 results["files"].append({
                     "input": parsed_doc.file_path,
                     "output": output_path,
                     "success": True,
                 })
-            else:
+            except Exception:
                 results["failed"] += 1
                 results["files"].append({
                     "input": parsed_doc.file_path,
@@ -360,7 +369,7 @@ def export_document(
     preserve_formatting: bool = True,
     overwrite: bool = False,
     original_file_path: Optional[str] = None,
-) -> bool:
+) -> None:
     """
     便捷函数：导出文档
 
@@ -371,8 +380,9 @@ def export_document(
         overwrite: 是否覆盖已存在的文件
         original_file_path: 原始文档路径（用于保留格式）
 
-    Returns:
-        bool: 是否导出成功
+    Raises:
+        FileExistsError_: 文件已存在且未设置覆盖
+        ExportError: 导出失败
     """
     exporter = DocumentExporter(preserve_formatting=preserve_formatting)
-    return exporter.export(parsed_doc, output_path, overwrite, original_file_path)
+    exporter.export(parsed_doc, output_path, overwrite, original_file_path)

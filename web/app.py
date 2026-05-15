@@ -240,18 +240,15 @@ elif page == "文档恢复":
                         map_path = str(local_mapping_path)
                     mapper = create_mapper()
                     output_file = tempfile.NamedTemporaryFile(delete=False, suffix='.docx')
-                    success, restored_doc = mapper.restore_document(
+                    restored_doc = mapper.restore_document(
                         redacted_file_path=tmp_redacted.name,
                         output_path=output_file.name,
                         map_path=map_path,
                     )
-                    if success:
-                        base = os.path.splitext(redacted_file.name)[0]
-                        st.session_state['restored_output_file'] = output_file.name
-                        st.session_state['restored_filename'] = f"{base}_restored.docx"
-                        st.success("恢复完成！")
-                    else:
-                        st.error("恢复失败，请检查映射文件")
+                    base = os.path.splitext(redacted_file.name)[0]
+                    st.session_state['restored_output_file'] = output_file.name
+                    st.session_state['restored_filename'] = f"{base}_restored.docx"
+                    st.success("恢复完成！")
                 except Exception as e:
                     st.error(f"恢复失败：{str(e)}")
         if 'restored_output_file' in st.session_state:
