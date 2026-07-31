@@ -105,9 +105,10 @@ class DocumentExporter:
                             para_idx += 1
                 elif isinstance(element, CT_Tbl):
                     table = DocxTable(element, doc)
-                    if table_idx < len(parsed_doc.tables):
-                        self._update_table_content(table, parsed_doc.tables[table_idx])
-                        table_idx += 1
+                    if table.rows:
+                        if table_idx < len(parsed_doc.tables):
+                            self._update_table_content(table, parsed_doc.tables[table_idx])
+                            table_idx += 1
 
             doc.save(output_path)
 

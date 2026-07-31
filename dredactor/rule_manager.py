@@ -3,7 +3,7 @@
 import json
 import os
 import re
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 
@@ -303,7 +303,7 @@ class RuleManager:
         rule.enabled = False
         return True
 
-    def list_rules(self, enabled_only: bool = False) -> List[Dict[str, any]]:
+    def list_rules(self, enabled_only: bool = False) -> List[Dict[str, Any]]:
         """
         列出规则信息
 

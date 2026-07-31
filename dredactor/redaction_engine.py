@@ -1,8 +1,9 @@
 """脱敏引擎 - 执行文本脱敏处理"""
 
+import bisect
 import re
 import time
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .logger import get_logger
 from .utils import clone_document
@@ -54,6 +55,7 @@ class RedactionEngine:
         self.replacement_text = replacement_text
         self.override_strategy = override_strategy
         self._warned_strategies: set = set()
+        self._compiled_cache: Dict[str, re.Pattern] = {}
 
         # 不可恢复策略警告
         if self.default_strategy in IRREVERSIBLE_STRATEGIES:
@@ -141,12 +143,14 @@ class RedactionEngine:
         original_text = text
         records = []
         replacements = []
+        intervals: List[Tuple[int, int]] = []
 
         for rule in sorted(self.rules, key=lambda r: r.priority, reverse=True):
             if not rule.enabled:
                 continue
 
-            matches = list(re.finditer(rule.pattern, original_text))
+            compiled = self._get_compiled_pattern(rule.pattern)
+            matches = list(compiled.finditer(original_text))
 
             if not matches:
                 continue
@@ -155,11 +159,15 @@ class RedactionEngine:
                 match_start = match.start()
                 match_end = match.end()
 
-                if any(
-                    match_start < existing_end and match_end > existing_start
-                    for existing_start, existing_end, _ in replacements
-                ):
+                idx = bisect.bisect_left(intervals, (match_start, match_end))
+
+                if idx > 0 and match_start < intervals[idx - 1][1]:
                     continue
+
+                if idx < len(intervals) and match_end > intervals[idx][0]:
+                    continue
+
+                bisect.insort(intervals, (match_start, match_end))
 
                 original = match.group()
                 redacted = self._redact_match(original, rule, match=match)
@@ -183,6 +191,21 @@ class RedactionEngine:
             redacted_text = redacted_text[:start] + redacted + redacted_text[end:]
 
         return redacted_text, records
+
+    def _get_compiled_pattern(self, pattern: str) -> re.Pattern:
+        """获取编译后的正则表达式（带缓存）
+
+        Args:
+            pattern: 正则表达式字符串
+
+        Returns:
+            re.Pattern: 编译后的正则对象
+        """
+        compiled = self._compiled_cache.get(pattern)
+        if compiled is None:
+            compiled = re.compile(pattern)
+            self._compiled_cache[pattern] = compiled
+        return compiled
 
     def _redact_match(self, text: str, rule: Rule, match: Optional[re.Match] = None) -> str:
         """

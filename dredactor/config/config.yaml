@@ -2,8 +2,8 @@
 
 # 脱敏默认设置
 redaction:
-  # 默认脱敏模式: replace(替换), mask(遮蔽), partial(部分显示)
-  default_mode: replace
+  # 默认脱敏策略: replace(替换), mask(遮蔽), partial(部分显示), company(公司名称)
+  default_strategy: replace
 
   # 替换文本
   replacement_text: "****"
