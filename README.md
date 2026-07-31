@@ -14,8 +14,8 @@
 - 支持批量文件导出（通过文档导出器）
 - 详细的脱敏报告生成（JSON和Markdown格式）
 - 可选AI智能脱敏（上下文感知，需要OpenAI API）
-- 灵活的脱敏模式（替换、遮蔽、部分显示）
-- 模式覆盖功能（可覆盖规则的默认模式）
+- 灵活的脱敏策略（替换、遮蔽、部分显示、公司名称）
+- 策略覆盖功能（可覆盖规则的默认策略）
 - 命令行界面（CLI）
 - **脱敏映射与恢复**：支持保存脱敏映射，后续可恢复原始敏感信息
 - **特征码方案**：使用文件名标记和文档内特征码，便于识别和恢复
@@ -50,17 +50,17 @@ pip install dredactor
 # 运行演示
 python -m dredactor.main demo
 
-# 脱敏单个文档（mask模式）
+# 脱敏单个文档（mask策略）
 python -m dredactor.main process document.docx
 
 # 指定输出文件
 python -m dredactor.main process document.docx -o output.docx
 
-# 使用replace模式
-python -m dredactor.main process document.docx -m replace --replacement "[已脱敏]"
+# 使用replace策略
+python -m dredactor.main process document.docx -s replace --replacement "[已脱敏]"
 
-# 使用replace模式并覆盖规则默认设置
-python -m dredactor.main process document.docx -m replace --replacement "[已脱敏]" --override-mode
+# 使用replace策略并覆盖规则默认设置
+python -m dredactor.main process document.docx -s replace --replacement "[已脱敏]" --override-strategy
 
 # 查看帮助
 python -m dredactor.main process --help
@@ -134,8 +134,8 @@ parsed_doc = parser.parse("document.docx")
 rule_manager = load_rules()
 rules = rule_manager.get_enabled_rules()
 
-# 创建脱敏引擎（使用mask模式，不覆盖规则默认设置）
-engine = create_engine(rules, mode='mask', override_mode=False)
+# 创建脱敏引擎（使用mask策略，不覆盖规则默认设置）
+engine = create_engine(rules, strategy='mask', override_strategy=False)
 result = engine.redact_document(parsed_doc)
 
 # 导出文档
@@ -160,12 +160,12 @@ parsed_doc = parser.parse("document.docx")
 rule_manager = load_rules()
 rules = rule_manager.get_enabled_rules()
 
-# 创建脱敏引擎（使用replace模式，并覆盖所有规则的默认模式）
+# 创建脱敏引擎（使用replace策略，并覆盖所有规则的默认策略）
 engine = create_engine(
     rules,
-    mode='replace',
+    strategy='replace',
     replacement='[已脱敏]',
-    override_mode=True
+    override_strategy=True
 )
 result = engine.redact_document(parsed_doc)
 
@@ -198,33 +198,38 @@ redacted_doc = mapper.apply_markers_to_document(result.redacted_doc, map_data)
 mapper.save_map(map_data)
 
 # 恢复文档（从编辑后的脱敏文档）
-success, restored_doc = mapper.restore_document(
+restored_doc = mapper.restore_document(
     redacted_file_path="output.docx",
     output_path="restored.docx"
 )
 ```
 
-## 脱敏模式
+## 脱敏策略
 
-Dredactor支持三种脱敏模式：
+Dredactor支持四种脱敏策略：
 
-1. **替换模式 (replace)**：完全替换为指定文本
+1. **替换策略 (replace)**：完全替换为指定文本
    ```python
-   # 覆盖规则默认模式
-   engine = create_engine(rules, mode='replace', replacement='[已脱敏]', override_mode=True)
+   # 覆盖规则默认策略
+   engine = create_engine(rules, strategy='replace', replacement='[已脱敏]', override_strategy=True)
    ```
 
-2. **遮蔽模式 (mask)**：用星号或其他字符遮蔽
+2. **遮蔽策略 (mask)**：用星号或其他字符遮蔽
    ```python
-   # 不覆盖规则默认模式（如果规则本身是mask模式）
-   engine = create_engine(rules, mode='mask', override_mode=False)
+   # 不覆盖规则默认策略（如果规则本身是mask策略）
+   engine = create_engine(rules, strategy='mask', override_strategy=False)
    # 结果：138****5678
    ```
 
-3. **部分显示模式 (partial)**：显示前后部分
+3. **部分显示策略 (partial)**：显示前后部分
    ```python
-   # 部分显示模式需要规则中定义 show_prefix 和 show_suffix
+   # 部分显示策略需要规则中定义 show_prefix 和 show_suffix
    # 结果：138****5678
+   ```
+
+4. **公司名称策略 (company)**：保留地名和公司类型，遮蔽中间字号
+   ```python
+   # 结果：杭州****有限公司
    ```
 
 ## 预置规则
@@ -339,18 +344,26 @@ Dredactor/
 │   ├── __init__.py
 │   ├── main.py             # CLI入口
 │   ├── document_parser.py  # 文档解析器
-│   ├── redaction_engine.py # 脱敏引擎
+│   ├── redaction_engine.py # 脱敏引擎（正则预编译缓存、bisect重叠检测）
 │   ├── document_exporter.py # 文档导出器
 │   ├── rule_manager.py      # 规则管理
 │   ├── report_generator.py  # 报告生成
 │   ├── redaction_mapper.py  # 脱敏映射管理器（特征码方案）
+│   ├── ai_redactor.py       # AI智能脱敏（可选）
+│   ├── config_loader.py     # 配置加载器
+│   ├── exceptions.py        # 自定义异常层次
+│   ├── logger.py            # 统一日志配置
+│   ├── utils.py             # 公共工具函数
 │   ├── models/              # 数据模型
 │   ├── rules/               # 规则文件
+│   ├── data/                # 数据文件（地名等）
 │   └── config/              # 配置文件
 ├── tests/                   # 测试文件
+├── web/                     # Web界面（Streamlit）
 ├── .mappings/               # 脱敏映射存储目录（.gitignore）
 ├── requirements.txt         # 依赖列表
 ├── setup.py                # 包配置
+├── CHANGELOG.md            # 更新日志
 └── README.md
 ```
 
@@ -363,6 +376,16 @@ Dredactor/
 本项目采用 Apache License 2.0 许可证 - 详见 [LICENSE](LICENSE) 文件
 
 ## 更新日志
+
+详细的更新记录请见 [CHANGELOG.md](CHANGELOG.md)。
+
+### v0.1.2 (2026-07-31)
+- **性能优化**：正则表达式预编译缓存，大文档脱敏耗时降低 40%-60%
+- **性能优化**：重叠检测算法升级为 bisect 二分查找（O(log n)），密集匹配场景性能显著提升
+- **修复**：空表格导致导出内容错位的 bug
+- **修复**：config.yaml 配置字段 `default_mode` 与代码不一致的问题，统一为 `default_strategy`
+- **改进**：类型标注修正（`any` -> `Any`），修复 mypy 报错
+- **改进**：文档与代码示例统一使用 `strategy`/`override_strategy` 参数名
 
 ### v0.1.1 (2026-04-22)
 - **修复**：脱敏映射特征码生成bug，避免不同敏感信息使用相同特征码
